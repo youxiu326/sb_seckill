@@ -37,7 +37,7 @@ public class DistributedLockAop {
         Object seckillId = args[0];
         try {
             // 尝试获取锁，最多等待3秒，上锁以后20秒自动解锁
-            res = RedissLockUtil.tryLock(seckillId+"", TimeUnit.SECONDS, 3, 20);
+            res = RedissLockUtil.tryLock("redis_lock_"+seckillId, TimeUnit.SECONDS, 3, 20);
             if(res) {
                 o = pjp.proceed();
             }else{
