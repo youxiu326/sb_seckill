@@ -72,7 +72,7 @@ public class SeckillController {
                     JSONResult result = seckillService.redisLockSeckil(seckillId, userId);
                     LOGGER.info("用户:{}{}",userId,result.get("msg"));
                 }else{
-                    // 秒杀结束
+                    LOGGER.error("提前判断秒杀已经结束用户:{}",userId);
                 }
                 latch.countDown();
             };
@@ -109,7 +109,7 @@ public class SeckillController {
                     JSONResult result = seckillService.zookeeperLockSeckil(seckillId, userId);
                     LOGGER.info("用户:{}{}",userId,result.get("msg"));
                 }else{
-                    // 秒杀结束
+                    LOGGER.error("提前判断秒杀已经结束用户:{}",userId);
                 }
                 latch.countDown();
             };
@@ -147,7 +147,7 @@ public class SeckillController {
                     // destination是发送到的队列，message是待发送的消息
                     jmsTemplate.convertAndSend(destination,seckillId+";"+userId);
                 }else{
-                    // 秒杀结束
+                    LOGGER.error("提前判断秒杀已经结束用户:{}",userId);
                 }
                 latch.countDown();
             };
