@@ -1,4 +1,4 @@
 
 ## 测试入口
-http://localhost:8080/swagger-ui.html
+http://localhost:8888/swagger-ui.html
 
