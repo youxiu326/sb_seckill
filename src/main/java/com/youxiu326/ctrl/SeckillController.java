@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.jms.Destination;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +51,7 @@ public class SeckillController {
     private static ThreadPoolExecutor executor  = new ThreadPoolExecutor(corePoolSize, corePoolSize+1, 10l, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(10000));
 
+    private final static int skillNum = 1000;
 
     @ApiOperation(value="Redis分布式锁", notes="秒杀1->Redis分布式锁")
     @ApiImplicitParams({
@@ -62,7 +64,8 @@ public class SeckillController {
         seckillService.deleteSeckill(seckillId);
         redisUtil.cacheValue(seckillId+"", null);//秒杀结束
 
-        for(int i=0;i<1000;i++){
+        final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
+        for(int i=0;i<skillNum;i++){
             final long userId = i;
             Runnable task = () -> {
                 if(redisUtil.getValue(seckillId+"")==null){
@@ -71,12 +74,13 @@ public class SeckillController {
                 }else{
                     // 秒杀结束
                 }
-
+                latch.countDown();
             };
             executor.execute(task);
         }
         try {
-            Thread.sleep(15000);
+            // 等待所有人任务结束
+            latch.await();
             Long  seckillCount = seckillService.getSeckillCount(seckillId);
             LOGGER.info("一共秒杀出{}件商品",seckillCount);
         } catch (InterruptedException e) {
@@ -97,22 +101,24 @@ public class SeckillController {
         seckillService.deleteSeckill(seckillId);
         redisUtil.cacheValue(seckillId+"", null);//秒杀结束
 
-        for(int i=0;i<1000;i++){
+        final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
+        for(int i=0;i<skillNum;i++){
             final long userId = i;
             Runnable task = () -> {
                 if(redisUtil.getValue(seckillId+"")==null){
-                    Destination destination = new ActiveMQQueue("seckill.queue");
-                    // destination是发送到的队列，message是待发送的消息
-                    jmsTemplate.convertAndSend(destination,seckillId+";"+userId);
+                    JSONResult result = seckillService.zookeeperLockSeckil(seckillId, userId);
+                    LOGGER.info("用户:{}{}",userId,result.get("msg"));
                 }else{
                     // 秒杀结束
                 }
+                latch.countDown();
             };
             executor.execute(task);
         }
 
         try {
-            Thread.sleep(15000);
+            // 等待所有人任务结束
+            latch.await();
             Long  seckillCount = seckillService.getSeckillCount(seckillId);
             LOGGER.info("一共秒杀出{}件商品",seckillCount);
         } catch (InterruptedException e) {
@@ -132,7 +138,8 @@ public class SeckillController {
         seckillService.deleteSeckill(seckillId);
         redisUtil.cacheValue(seckillId+"", null);//秒杀结束
 
-        for(int i=0;i<1000;i++){
+        final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
+        for(int i=0;i<skillNum;i++){
             final long userId = i;
             Runnable task = () -> {
                 if(redisUtil.getValue(seckillId+"")==null){
@@ -142,12 +149,14 @@ public class SeckillController {
                 }else{
                     // 秒杀结束
                 }
+                latch.countDown();
             };
             executor.execute(task);
         }
 
         try {
-            Thread.sleep(15000);
+            // 等待所有人任务结束
+            latch.await();
             Long  seckillCount = seckillService.getSeckillCount(seckillId);
             LOGGER.info("一共秒杀出{}件商品",seckillCount);
         } catch (InterruptedException e) {
