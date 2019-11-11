@@ -46,11 +46,37 @@ public class SeckillController {
             new LinkedBlockingQueue<>(10000));
 
 
+    @ApiOperation(value="Rediss分布式锁", notes="秒杀1->Rediss分布式锁")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "killId", value = "商品id", required = true, dataType = "long",paramType = "query"),
+    })
+    @PostMapping(value="/redislook/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    public JSONResult redislookPay(long killId){
+        JSONResult result = new JSONResult();
+
+        for(int i=0;i<1000;i++){
+            final long userId = i;
+            Runnable task = () -> {
+                if(redisUtil.getValue(killId+"")==null){
+                    Destination destination = new ActiveMQQueue("seckill.queue");
+                    // destination是发送到的队列，message是待发送的消息
+                    jmsTemplate.convertAndSend(destination,killId+";"+userId);
+                }else{
+                    //秒杀结束
+                }
+            };
+            executor.execute(task);
+        }
+
+        return result;
+    }
+
+
     @ApiOperation(value="ActiveMQ分布式队列秒杀", notes="秒杀5->ActiveMQ分布式队列秒杀")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "killId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
-    @PostMapping(value="/activemq/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    @PostMapping(value="/activemq/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
     public JSONResult activemqPay(long killId){
         JSONResult result = new JSONResult();
 

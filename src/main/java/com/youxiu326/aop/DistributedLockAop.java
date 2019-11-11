@@ -1,5 +1,6 @@
 package com.youxiu326.aop;
 
+import com.youxiu326.common.enums.SeckillStatEnum;
 import com.youxiu326.common.result.JSONResult;
 import com.youxiu326.lock.redis.RedissLockUtil;
 import com.youxiu326.lock.zookeeper.ZookeeperLockUtil;
@@ -40,7 +41,7 @@ public class DistributedLockAop {
             if(res) {
                 o = pjp.proceed();
             }else{
-                return new JSONResult().FAIL;
+                return new JSONResult().FAIL(SeckillStatEnum.MUCH);
             }
         } catch (Throwable throwable) {
             throwable.printStackTrace();
@@ -70,7 +71,7 @@ public class DistributedLockAop {
             if(res) {
                 o = pjp.proceed();
             }else{
-                return new JSONResult().FAIL;
+                return new JSONResult().FAIL(SeckillStatEnum.MUCH);
             }
         } catch (Throwable throwable) {
             throwable.printStackTrace();

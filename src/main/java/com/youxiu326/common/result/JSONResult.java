@@ -1,5 +1,7 @@
 package com.youxiu326.common.result;
 
+import com.youxiu326.common.enums.SeckillStatEnum;
+
 import java.util.HashMap;
 
 /**
@@ -34,9 +36,21 @@ public class JSONResult extends HashMap<String,Object> {
         return this;
     }
 
+    public JSONResult SUCCEED(SeckillStatEnum seckillStatEnum){
+        this.put("state",SUCCEED);
+        this.put("msg",seckillStatEnum.toString());
+        return this;
+    }
+
     public JSONResult FAIL(String msg){
         this.put("state",FAIL);
         this.put("msg",msg);
+        return this;
+    }
+
+    public JSONResult FAIL(SeckillStatEnum seckillStatEnum){
+        this.put("state",FAIL);
+        this.put("msg",seckillStatEnum.toString());
         return this;
     }
 
