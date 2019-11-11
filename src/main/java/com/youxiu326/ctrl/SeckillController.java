@@ -60,8 +60,8 @@ public class SeckillController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
-    @PostMapping(value="/redislook/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
-    public JSONResult redislookPay(long seckillId){
+    @PostMapping(value="/redislock/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    public JSONResult redislockPay(long seckillId){
 
         // 先删除记录
         seckillService.deleteSeckill(seckillId);
@@ -97,8 +97,8 @@ public class SeckillController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
-    @PostMapping(value="/zookeeperlook/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
-    public JSONResult zookeeperlookPay(long seckillId){
+    @PostMapping(value="/zookeeperlock/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    public JSONResult zookeeperlockPay(long seckillId){
 
         // 先删除记录
         seckillService.deleteSeckill(seckillId);
