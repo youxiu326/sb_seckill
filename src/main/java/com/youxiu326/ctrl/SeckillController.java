@@ -1,6 +1,8 @@
 package com.youxiu326.ctrl;
 
+import com.youxiu326.common.enums.SeckillStatEnum;
 import com.youxiu326.common.result.JSONResult;
+import com.youxiu326.service.SeckillDistributedService;
 import com.youxiu326.util.RedisUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -39,6 +41,9 @@ public class SeckillController {
     @Autowired
     private RedisUtil redisUtil;
 
+    @Autowired
+    private SeckillDistributedService seckillService;
+
     private static int corePoolSize = Runtime.getRuntime().availableProcessors();
 
     //调整队列数 拒绝服务 【AbortPolicy 拒绝任务，并抛出异常，为默认的策略】
@@ -51,16 +56,54 @@ public class SeckillController {
             @ApiImplicitParam(name = "killId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
     @PostMapping(value="/redislook/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
-    public JSONResult redislookPay(long killId){
-        JSONResult result = new JSONResult();
+    public JSONResult redislookPay(long seckillId){
+
+        // 先删除记录
+        seckillService.deleteSeckill(seckillId);
+        redisUtil.cacheValue(seckillId+"", null);//秒杀结束
 
         for(int i=0;i<1000;i++){
             final long userId = i;
             Runnable task = () -> {
-                if(redisUtil.getValue(killId+"")==null){
+                if(redisUtil.getValue(seckillId+"")==null){
+                    JSONResult result = seckillService.redisLockSeckil(seckillId, userId);
+                    LOGGER.info("用户:{}{}",userId,result.get("msg"));
+                }else{
+
+                }
+
+            };
+            executor.execute(task);
+        }
+        try {
+            Thread.sleep(15000);
+            Long  seckillCount = seckillService.getSeckillCount(seckillId);
+            LOGGER.info("一共秒杀出{}件商品",seckillCount);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return new JSONResult().SUCCEED();
+    }
+
+
+    @ApiOperation(value="Zookeeper分布式锁", notes="秒杀2->Zookeeper分布式锁")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "killId", value = "商品id", required = true, dataType = "long",paramType = "query"),
+    })
+    @PostMapping(value="/zookeeperlook/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    public JSONResult zookeeperlookPay(long seckillId){
+
+        // 先删除记录
+        seckillService.deleteSeckill(seckillId);
+        redisUtil.cacheValue(seckillId+"", null);//秒杀结束
+
+        for(int i=0;i<1000;i++){
+            final long userId = i;
+            Runnable task = () -> {
+                if(redisUtil.getValue(seckillId+"")==null){
                     Destination destination = new ActiveMQQueue("seckill.queue");
                     // destination是发送到的队列，message是待发送的消息
-                    jmsTemplate.convertAndSend(destination,killId+";"+userId);
+                    jmsTemplate.convertAndSend(destination,seckillId+";"+userId);
                 }else{
                     //秒杀结束
                 }
@@ -68,25 +111,34 @@ public class SeckillController {
             executor.execute(task);
         }
 
-        return result;
+        try {
+            Thread.sleep(15000);
+            Long  seckillCount = seckillService.getSeckillCount(seckillId);
+            LOGGER.info("一共秒杀出{}件商品",seckillCount);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return new JSONResult().SUCCEED();
     }
-
 
     @ApiOperation(value="ActiveMQ分布式队列秒杀", notes="秒杀5->ActiveMQ分布式队列秒杀")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "killId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
     @PostMapping(value="/activemq/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
-    public JSONResult activemqPay(long killId){
-        JSONResult result = new JSONResult();
+    public JSONResult activemqPay(long seckillId){
+
+        // 先删除记录
+        seckillService.deleteSeckill(seckillId);
+        redisUtil.cacheValue(seckillId+"", null);//秒杀结束
 
         for(int i=0;i<1000;i++){
             final long userId = i;
             Runnable task = () -> {
-                if(redisUtil.getValue(killId+"")==null){
+                if(redisUtil.getValue(seckillId+"")==null){
                     Destination destination = new ActiveMQQueue("seckill.queue");
                     // destination是发送到的队列，message是待发送的消息
-                    jmsTemplate.convertAndSend(destination,killId+";"+userId);
+                    jmsTemplate.convertAndSend(destination,seckillId+";"+userId);
                 }else{
                     //秒杀结束
                 }
@@ -94,7 +146,14 @@ public class SeckillController {
             executor.execute(task);
         }
 
-        return result;
+        try {
+            Thread.sleep(15000);
+            Long  seckillCount = seckillService.getSeckillCount(seckillId);
+            LOGGER.info("一共秒杀出{}件商品",seckillCount);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return new JSONResult().SUCCEED();
     }
 
 
