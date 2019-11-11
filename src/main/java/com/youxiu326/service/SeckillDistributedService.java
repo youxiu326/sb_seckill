@@ -35,4 +35,12 @@ public interface SeckillDistributedService {
      */
     Long getSeckillCount(long seckillId);
 
+    /**
+     * 数据库悲观锁   update
+     * @param seckillId
+     * @param userId
+     * @return
+     */
+    JSONResult seckilDBPCC_TWO(long seckillId,long userId);
+
 }
