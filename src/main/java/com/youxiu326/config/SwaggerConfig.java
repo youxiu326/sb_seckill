@@ -27,7 +27,7 @@ public class SwaggerConfig {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
-                .apis(RequestHandlerSelectors.basePackage("com.youxiu326.controller"))
+                .apis(RequestHandlerSelectors.basePackage("com.youxiu326.ctrl"))
                 .paths(PathSelectors.any()).build();
 
     }
