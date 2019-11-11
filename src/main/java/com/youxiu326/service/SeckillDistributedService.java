@@ -43,4 +43,6 @@ public interface SeckillDistributedService {
      */
     JSONResult seckilDBPCC_TWO(long seckillId,long userId);
 
+
+    JSONResult startSeckil(long seckillId,long userId);
 }

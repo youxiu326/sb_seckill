@@ -12,6 +12,7 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jms.core.JmsMessagingTemplate;
 import org.springframework.stereotype.Controller;
@@ -44,6 +45,9 @@ public class SeckillController {
     @Autowired
     private SeckillDistributedService seckillService;
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
     private static int corePoolSize = Runtime.getRuntime().availableProcessors();
 
     //调整队列数 拒绝服务 【AbortPolicy 拒绝任务，并抛出异常，为默认的策略】
@@ -52,7 +56,7 @@ public class SeckillController {
 
     private final static int skillNum = 1000;
 
-    @ApiOperation(value="Redis分布式锁", notes="秒杀1->Redis分布式锁")
+    @ApiOperation(value="秒杀1->Redis分布式锁", notes="Redis分布式锁")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
@@ -89,7 +93,7 @@ public class SeckillController {
     }
 
 
-    @ApiOperation(value="Zookeeper分布式锁", notes="秒杀2->Zookeeper分布式锁")
+    @ApiOperation(value="秒杀2->Zookeeper分布式锁", notes="Zookeeper分布式锁")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
@@ -126,7 +130,41 @@ public class SeckillController {
         return new JSONResult().SUCCEED();
     }
 
-    @ApiOperation(value="ActiveMQ分布式队列秒杀", notes="秒杀5->ActiveMQ分布式队列秒杀")
+    @ApiOperation(value="秒杀3->Redis分布式队列-订阅监听", notes="Redis分布式队列-订阅监听")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "seckillId", value = "商品id", required = true, dataType = "long",paramType = "query"),
+    })
+    @PostMapping(value="/redisQueue/pay",consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
+    public JSONResult redisQueuePay(long seckillId){
+
+        // 先删除记录
+        seckillService.deleteSeckill(seckillId);
+        redisUtil.cacheValue(seckillId+"", null);//秒杀结束
+
+        for(int i=0;i<skillNum;i++){
+            final long userId = i;
+            Runnable task = () -> {
+                if(redisUtil.getValue(seckillId+"")==null){
+                    stringRedisTemplate.convertAndSend("seckill",seckillId+";"+userId);
+                }else{
+                    LOGGER.error("提前判断秒杀已经结束用户:{}",userId);
+                }
+            };
+            executor.execute(task);
+        }
+
+        try {
+            Thread.sleep(10000);
+            redisUtil.cacheValue(seckillId+"", null);
+            Long  seckillCount = seckillService.getSeckillCount(seckillId);
+            LOGGER.info("一共秒杀出{}件商品",seckillCount);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return new JSONResult().SUCCEED();
+    }
+
+    @ApiOperation(value="秒杀5->ActiveMQ分布式队列秒杀", notes="ActiveMQ分布式队列秒杀")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "seckillId", value = "商品id", required = true, dataType = "long",paramType = "query"),
     })
@@ -137,7 +175,6 @@ public class SeckillController {
         seckillService.deleteSeckill(seckillId);
         redisUtil.cacheValue(seckillId+"", null);//秒杀结束
 
-        final CountDownLatch latch = new CountDownLatch(skillNum);//N个购买者
         for(int i=0;i<skillNum;i++){
             final long userId = i;
             Runnable task = () -> {
@@ -148,14 +185,13 @@ public class SeckillController {
                 }else{
                     LOGGER.error("提前判断秒杀已经结束用户:{}",userId);
                 }
-                latch.countDown();
             };
             executor.execute(task);
         }
 
         try {
-            // 等待所有人任务结束
-            latch.await();
+            Thread.sleep(10000);
+            redisUtil.cacheValue(seckillId+"", null);
             Long  seckillCount = seckillService.getSeckillCount(seckillId);
             LOGGER.info("一共秒杀出{}件商品",seckillCount);
         } catch (InterruptedException e) {

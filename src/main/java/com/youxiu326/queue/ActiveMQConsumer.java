@@ -27,8 +27,10 @@ public class ActiveMQConsumer {
     public void receiveQueue(String message) throws IOException {
         //收到通道的消息之后执行秒杀操作(超卖)
         String[] array = message.split(";");
+        // JSONResult result = seckillService.startSeckil(Long.parseLong(array[0]), Long.parseLong(array[1]));
         JSONResult result = seckillService.seckilDBPCC_TWO(Long.parseLong(array[0]), Long.parseLong(array[1]));
-        if(result.get("msg").equals(SeckillStatEnum.SUCCESS)){
+
+        if(result.get("msg").equals(SeckillStatEnum.SUCCESS.toString())){
             webSocketServer.sendInfo(array[0].toString(), "秒杀成功");//推送给前台
         }else{
             webSocketServer.sendInfo(array[0].toString(), "秒杀失败");//推送给前台

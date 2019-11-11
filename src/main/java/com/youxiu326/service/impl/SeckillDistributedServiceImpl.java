@@ -50,6 +50,38 @@ public class SeckillDistributedServiceImpl implements SeckillDistributedService 
     }
 
     /**
+     * SHOW STATUS LIKE 'innodb_row_lock%';
+     * 如果发现锁争用比较严重，如InnoDB_row_lock_waits和InnoDB_row_lock_time_avg的值比较高
+     */
+    @Override
+    @Transactional
+    public JSONResult seckilDBPCC_TWO(long seckillId, long userId) {
+        JSONResult result = new JSONResult();
+
+        // 单用户抢购一件商品没有问题、但是抢购多件商品不建议这种写法
+        // UPDATE锁表
+        String nativeSql = "UPDATE seckill SET number=number-1 WHERE seckill_id=? AND number>0";
+        int count = dynamicQuery.nativeExecuteUpdate(nativeSql, new Object[]{seckillId});
+        if(count>0){
+            SuccessKilled killed = new SuccessKilled();
+            killed.setSeckillId(seckillId);
+            killed.setUserId(userId);
+            killed.setState((short)0);
+            killed.setCreateTime(new Timestamp(new Date().getTime()));
+            dynamicQuery.save(killed);
+            return result.SUCCEED(SeckillStatEnum.SUCCESS);
+        }else{
+            return result.FAIL(SeckillStatEnum.END);
+        }
+    }
+
+    @Override
+    @Transactional
+    public JSONResult startSeckil(long seckillId, long userId) {
+        return seckill(seckillId,userId);
+    }
+
+    /**
      * 秒杀业务逻辑抽取
      * @param seckillId
      * @param userId
